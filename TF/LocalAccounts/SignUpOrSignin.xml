@@ -8,7 +8,7 @@
     <PolicyId>B2C_1A_TrustFrameworkExtensions</PolicyId>
   </BasePolicy>
   <BuildingBlocks>
-    <!-- add our new fields for password validation -->
+    <!-- add our new fields for password validation. See here: https://docs.microsoft.com/en-us/azure/active-directory-b2c/active-directory-b2c-reference-password-complexity-custom -->
     <ClaimsSchema>
       <ClaimType Id="newPassword">
         <InputValidationReference Id="PasswordValidation" />
