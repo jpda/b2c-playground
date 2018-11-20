@@ -1,34 +1,117 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<TrustFrameworkPolicy
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-  xmlns="http://schemas.microsoft.com/online/cpim/schemas/2013/06"
-  PolicySchemaVersion="0.3.0.0"
-  TenantId="yourtenant.onmicrosoft.com"
-  PolicyId="B2C_1A_signup_signin"
-  PublicPolicyUri="http://yourtenant.onmicrosoft.com/B2C_1A_signup_signin">
+<TrustFrameworkPolicy xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns="http://schemas.microsoft.com/online/cpim/schemas/2013/06" PolicySchemaVersion="0.3.0.0" TenantId="jpdb2c.onmicrosoft.com" PolicyId="B2C_1A_signup_signin" PublicPolicyUri="http://jpdb2c.onmicrosoft.com/B2C_1A_signup_signin">
 
   <BasePolicy>
-    <TenantId>yourtenant.onmicrosoft.com</TenantId>
+    <TenantId>jpdb2c.onmicrosoft.com</TenantId>
     <PolicyId>B2C_1A_TrustFrameworkExtensions</PolicyId>
   </BasePolicy>
-
+  <BuildingBlocks>
+    <ClaimsSchema>
+      <ClaimType Id="newPassword">
+        <InputValidationReference Id="PasswordValidation" />
+      </ClaimType>
+      <ClaimType Id="reenterPassword">
+        <InputValidationReference Id="PasswordValidation" />
+      </ClaimType>
+    </ClaimsSchema>
+    <Predicates>
+      <Predicate Id="Lowercase" Method="MatchesRegex" HelpText="a lowercase">
+        <Parameters>
+          <Parameter Id="RegularExpression">[a-z]+</Parameter>
+        </Parameters>
+      </Predicate>
+      <Predicate Id="Uppercase" Method="MatchesRegex" HelpText="an uppercase">
+        <Parameters>
+          <Parameter Id="RegularExpression">[A-Z]+</Parameter>
+        </Parameters>
+      </Predicate>
+      <Predicate Id="Number" Method="MatchesRegex" HelpText="a number">
+        <Parameters>
+          <Parameter Id="RegularExpression">[0-9]+</Parameter>
+        </Parameters>
+      </Predicate>
+      <Predicate Id="Symbol" Method="MatchesRegex" HelpText="a symbol">
+        <Parameters>
+          <Parameter Id="RegularExpression">[!@#$%^*()]+</Parameter>
+        </Parameters>
+      </Predicate>
+      <Predicate Id="Length" Method="IsLengthRange" HelpText="The password must be between 8 and 128 characters.">
+        <Parameters>
+          <Parameter Id="Minimum">8</Parameter>
+          <Parameter Id="Maximum">128</Parameter>
+        </Parameters>
+      </Predicate>
+      <Predicate Id="PIN" Method="MatchesRegex" HelpText="The password must be a pin.">
+        <Parameters>
+          <Parameter Id="RegularExpression">^[0-9]+$</Parameter>
+        </Parameters>
+      </Predicate>
+    </Predicates>
+    <InputValidations>
+      <InputValidation Id="PasswordValidation">
+        <PredicateReferences Id="LengthGroup" MatchAtLeast="1">
+          <PredicateReference Id="Length" />
+        </PredicateReferences>
+        <PredicateReferences Id="3of4" MatchAtLeast="3" HelpText="You must have at least 3 of the following character classes:">
+          <PredicateReference Id="Lowercase" />
+          <PredicateReference Id="Uppercase" />
+          <PredicateReference Id="Number" />
+          <PredicateReference Id="Symbol" />
+        </PredicateReferences>
+      </InputValidation>
+      <InputValidation Id="PINpassword">
+        <PredicateReferences Id="PINGroup">
+          <PredicateReference Id="PIN" />
+        </PredicateReferences>
+      </InputValidation>
+    </InputValidations>
+  </BuildingBlocks>
+  <!-- password contains validator -->
+  <ClaimsProviders>
+    <ClaimsProvider>
+      <DisplayName>PasswordContainsValidator</DisplayName>
+      <TechnicalProfiles>
+        <TechnicalProfile Id="AzureFunctions-PasswordContainsValidator">
+          <DisplayName>Use a function to make sure the password doesn't contain the username</DisplayName>
+          <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <Metadata>
+            <Item Key="ServiceUrl">https://jpd-pwvalidator.azurewebsites.net/api/password-contains</Item>
+            <Item Key="AuthenticationType">None</Item>
+            <Item Key="SendClaimsIn">QueryString</Item>
+          </Metadata>
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="email"/>
+            <InputClaim ClaimTypeReferenceId="newPassword"/>
+          </InputClaims>
+          <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
+        </TechnicalProfile>
+        <TechnicalProfile Id="LocalAccountSignUpWithLogonEmail">
+          <ValidationTechnicalProfiles>
+            <ValidationTechnicalProfile ReferenceId="AzureFunctions-PasswordContainsValidator" />
+          </ValidationTechnicalProfiles>
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>
+  </ClaimsProviders>
+  <!-- end pw contains-->
   <RelyingParty>
     <DefaultUserJourney ReferenceId="SignUpOrSignIn" />
     <TechnicalProfile Id="PolicyProfile">
       <DisplayName>PolicyProfile</DisplayName>
       <Protocol Name="OpenIdConnect" />
+      <InputClaims>
+        <InputClaim ClaimTypeReferenceId="passwordPolicies" DefaultValue="DisablePasswordExpiration, DisableStrongPassword" />
+      </InputClaims>
       <OutputClaims>
         <OutputClaim ClaimTypeReferenceId="displayName" />
         <OutputClaim ClaimTypeReferenceId="givenName" />
         <OutputClaim ClaimTypeReferenceId="surname" />
         <OutputClaim ClaimTypeReferenceId="email" />
         <OutputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="sub"/>
-
       </OutputClaims>
       <SubjectNamingInfo ClaimType="sub" />
     </TechnicalProfile>
   </RelyingParty>
 </TrustFrameworkPolicy>
-
-
