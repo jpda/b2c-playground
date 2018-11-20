@@ -8,6 +8,7 @@
     <PolicyId>B2C_1A_TrustFrameworkExtensions</PolicyId>
   </BasePolicy>
   <BuildingBlocks>
+    <!-- add our new fields for password validation -->
     <ClaimsSchema>
       <ClaimType Id="newPassword">
         <InputValidationReference Id="PasswordValidation" />
@@ -16,6 +17,8 @@
         <InputValidationReference Id="PasswordValidation" />
       </ClaimType>
     </ClaimsSchema>
+    <!-- end new fields -->
+    <!-- these predicates dictate the validation rules on passwords as they are entered. this is the definition of the predicates, not the usage -->
     <Predicates>
       <Predicate Id="Lowercase" Method="MatchesRegex" HelpText="a lowercase">
         <Parameters>
@@ -43,6 +46,7 @@
           <Parameter Id="Maximum">128</Parameter>
         </Parameters>
       </Predicate>
+      <!-- end validation predicates -->
       <Predicate Id="PIN" Method="MatchesRegex" HelpText="The password must be a pin.">
         <Parameters>
           <Parameter Id="RegularExpression">^[0-9]+$</Parameter>
@@ -50,6 +54,7 @@
       </Predicate>
     </Predicates>
     <InputValidations>
+    <!-- this input validator is the usage of the above predicates -->
       <InputValidation Id="PasswordValidation">
         <PredicateReferences Id="LengthGroup" MatchAtLeast="1">
           <PredicateReference Id="Length" />
@@ -61,6 +66,7 @@
           <PredicateReference Id="Symbol" />
         </PredicateReferences>
       </InputValidation>
+      <!-- end validator usage -->
       <InputValidation Id="PINpassword">
         <PredicateReferences Id="PINGroup">
           <PredicateReference Id="PIN" />
@@ -68,25 +74,30 @@
       </InputValidation>
     </InputValidations>
   </BuildingBlocks>
-  <!-- password contains validator -->
+  <!-- this is the REST API for validating passwords beyond predicates. In this case, we're validating the password doesn't contain the username. -->
   <ClaimsProviders>
     <ClaimsProvider>
       <DisplayName>PasswordContainsValidator</DisplayName>
       <TechnicalProfiles>
+      <!-- definition of the TP, the ID here is what we can use to reference it later in usage -->
         <TechnicalProfile Id="AzureFunctions-PasswordContainsValidator">
           <DisplayName>Use a function to make sure the password doesn't contain the username</DisplayName>
           <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
           <Metadata>
+          <!-- REST endpoint -->
             <Item Key="ServiceUrl">https://jpd-pwvalidator.azurewebsites.net/api/password-contains</Item>
+            <!-- authentication can be done in various ways, using none here for simplicity and also because this isn't a sensitive operation -->
             <Item Key="AuthenticationType">None</Item>
             <Item Key="SendClaimsIn">QueryString</Item>
           </Metadata>
+          <!-- these are the claims we want sent to our REST API. These need to be available either via the technical profile that calls this one (e.g., in a UserJourney) or via a ValidationProfile -->
           <InputClaims>
             <InputClaim ClaimTypeReferenceId="email"/>
             <InputClaim ClaimTypeReferenceId="newPassword"/>
           </InputClaims>
           <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
         </TechnicalProfile>
+        <!-- here, instead of modifying a profile at it's definition, we're adding this as a validator on an existing TP - in this case, LocalAccountSignUpWithLogonEmail, which is defined in the TrustFrameworkBase.xml -->
         <TechnicalProfile Id="LocalAccountSignUpWithLogonEmail">
           <ValidationTechnicalProfiles>
             <ValidationTechnicalProfile ReferenceId="AzureFunctions-PasswordContainsValidator" />
